@@ -1,18 +1,17 @@
-import cc.mallet.extract.StringSpan;
+package pipes;
+
+import util.Constants;
 import cc.mallet.pipe.Noop;
 import cc.mallet.types.Instance;
 import cc.mallet.types.Token;
 import cc.mallet.types.TokenSequence;
 import org.json.JSONObject;
-import ru.stachek66.nlp.mystem.holding.Factory;
 import ru.stachek66.nlp.mystem.holding.MyStem;
 import ru.stachek66.nlp.mystem.holding.MyStemApplicationException;
 import ru.stachek66.nlp.mystem.holding.Request;
 import ru.stachek66.nlp.mystem.model.Info;
-import scala.Option;
 import scala.collection.JavaConversions;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.function.Function;
@@ -27,7 +26,7 @@ public class TokenSequence2Stem extends Noop {
             new Factory("-igd --eng-gr --format json --weight")
                     .newMyStem("3.0", Option.<File>empty()).get();*/
 
-    public Function<String, Stream<Token>> qwe = new Function<String, Stream<Token>>() {
+    public Function<String, Stream<Token>> stem = new Function<String, Stream<Token>>() {
         @Override
         public Stream<Token> apply(String s) {
             ArrayList<Token> ret = new ArrayList<>();
@@ -67,7 +66,7 @@ public class TokenSequence2Stem extends Noop {
 //        new JSONObject()
         long l = System.currentTimeMillis();
         TokenSequence ts = (TokenSequence) carrier.getData();
-//        ts=new TokenSequence(ts.parallelStream().map(qwe).collect(Collectors.toList()));
+//        ts=new TokenSequence(ts.parallelStream().map(stem).collect(Collectors.toList()));
         ArrayList<String> lst = (ArrayList<String>) ts.stream().map(Token::getText).collect(Collectors.toList());
 
         ArrayList<String> chunks = new ArrayList<>();
@@ -78,7 +77,7 @@ public class TokenSequence2Stem extends Noop {
                 chunks.add(lst.subList(start, Math.min(end, lst.size()) - 1).stream().reduce((s, s2) -> s + " " + s2).get());
             }
             chunks.add(lst.subList(start, lst.size()).stream().reduce((s, s2) -> s + " " + s2).get());
-            carrier.setData(new TokenSequence(chunks.parallelStream().flatMap(qwe).collect(Collectors.toList())));
+            carrier.setData(new TokenSequence(chunks.parallelStream().flatMap(stem).collect(Collectors.toList())));
         }
 
 

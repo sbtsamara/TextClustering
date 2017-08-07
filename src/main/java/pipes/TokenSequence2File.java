@@ -1,20 +1,11 @@
+package pipes;
+
 import cc.mallet.pipe.Noop;
 import cc.mallet.types.Instance;
 import cc.mallet.types.Token;
 import cc.mallet.types.TokenSequence;
-import org.json.JSONObject;
-import ru.stachek66.nlp.mystem.holding.MyStem;
-import ru.stachek66.nlp.mystem.holding.MyStemApplicationException;
-import ru.stachek66.nlp.mystem.holding.Request;
-import ru.stachek66.nlp.mystem.model.Info;
-import scala.collection.JavaConversions;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Created by azaz on 27.07.17.

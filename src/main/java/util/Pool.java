@@ -1,3 +1,5 @@
+package util;
+
 import ru.stachek66.nlp.mystem.holding.Factory;
 import ru.stachek66.nlp.mystem.holding.MyStem;
 import scala.Option;

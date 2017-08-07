@@ -1,7 +1,9 @@
+package pipes;
+
 import cc.mallet.pipe.Noop;
 import cc.mallet.types.Instance;
 
-import java.util.ArrayList;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
