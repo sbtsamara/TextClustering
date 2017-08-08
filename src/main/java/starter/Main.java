@@ -12,12 +12,13 @@ import java.io.*;
 public class Main {
 
     public static final File binFile = new File("/home/azaz/PycharmProjects/SBT/Models/ruscorpora_mean_hs.model.bin");
-    public static Word2VecModel binModel;
+//    public static Word2VecModel binModel;
 
 
     public static void main(String[] args) throws Exception {
 
         LDA lda = new LDA();
+        lda.LDAOnText();
 //        preprocessFile("");
 
 //        w2vBuildModel();
@@ -28,8 +29,8 @@ public class Main {
 //        System.out.println("=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*");
 
 //        testW2VModel();
-        W2v w2v = new W2v();
-        w2v.W2VCluster();
+//        W2v w2v = new W2v();
+//        w2v.W2VCluster();
     }
 
 }

@@ -29,7 +29,20 @@ public class LDA {
 
 //        preprocessFile("filtered_logs_1.tsv", "stammed.txt");
 //        ParallelTopicModel model = trainModel(50, "stammed.txt");
-        TestModel("models/model_Logs_2000.bin.2000");
+//        TestModel("models/model_Logs_2000.bin.2000");
+        printModel("models/model_Logs_2000.bin.2000");
+    }
+
+    private void printModel(String filename) throws Exception {
+        ParallelTopicModel model = ParallelTopicModel.read(new File(filename));
+        System.out.println("Loaded");
+        int i=0;
+        for(Object[] words:model.getTopWords(10)){
+            System.out.println("тема № "+i+" ключевые слова: "+Arrays.toString(words));
+
+
+            i++;
+        }
     }
 
     private void init() {
@@ -153,7 +166,7 @@ public class LDA {
         return model;
     }
 
-    public List<Double> getVector(String s) {
+    /*public List<Double> getVector(String s) {
         try {
             System.out.println(Main.binModel.forSearch().getMatches(s, 10));
             return Main.binModel.forSearch().getRawVector(s);
@@ -164,5 +177,5 @@ public class LDA {
         return null;
 
 
-    }
+    }*/
 }
