@@ -21,8 +21,18 @@ import net.sf.javaml.core.DefaultDataset;
 import net.sf.javaml.core.DenseInstance;
 import net.sf.javaml.distance.CosineDistance;
 import net.sf.javaml.tools.Serial;
+import org.deeplearning4j.models.embeddings.learning.ElementsLearningAlgorithm;
+import org.deeplearning4j.models.embeddings.learning.impl.elements.SkipGram;
+import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
+import org.deeplearning4j.models.sequencevectors.iterators.AbstractSequenceIterator;
+import org.deeplearning4j.models.word2vec.VocabWord;
+import org.deeplearning4j.models.word2vec.Word2Vec;
+import org.deeplearning4j.text.documentiterator.interoperability.DocumentIteratorConverter;
+import org.deeplearning4j.text.sentenceiterator.CollectionSentenceIterator;
+import org.deeplearning4j.text.tokenization.tokenizerfactory.DefaultTokenizerFactory;
+import org.nd4j.linalg.cpu.nativecpu.NDArray;
+import org.nd4j.linalg.factory.Nd4j;
 import pipes.FunctionToPipe;
-import starter.Main;
 import util.Utils;
 
 import java.io.File;
@@ -38,17 +48,20 @@ import java.util.stream.Collectors;
  * Created by azaz on 07.08.17.
  */
 public class W2v {
+//    public static Word2VecModel binModel;
+    public static Word2Vec model;
+
     public void W2VCluster() throws IOException, Searcher.UnknownWordException {
         System.out.println("reading model");
-        Main.binModel = Word2VecModel.fromBinFile(new File("./models/w2v_02.bin"));
-        Searcher search = Main.binModel.forSearch();
+
+        model = WordVectorSerializer.readWord2VecModel(new File("./models/w2v_02.bin"));
+//        Searcher search = binModel.forSearch();
         Dataset data = new DefaultDataset();
         System.out.println("get W2v");
-        for (String s : Main.binModel.getVocab()) {
+        for (String s : model.getVocab().words()) {
 //            System.out.println(s);
-            ImmutableList<Double> rawVector = search.getRawVector(s);
-            double[] arr = Utils.getDoubles(rawVector);
-            data.add(new DenseInstance(arr));
+            double[] rawVector = model.getWordVector(s);
+            data.add(new DenseInstance(rawVector));
         }
 //        System.out.println(data.size());
         System.out.println("clustering");
@@ -58,7 +71,9 @@ public class W2v {
 
         for (Dataset d : clusters) {
             for (int i = 0; i < Math.min(10, d.size()); i++) {
-                System.out.println(search.getMatches(Utils.getDoubles(d.get(i).values()), 3));
+                double [][] arr1=new double[1][d.get(i).values().size()];
+                arr1[0]=Utils.getDoubles(d.get(i).values());
+                System.out.println(model.wordsNearest(new NDArray(arr1), 3));
             }
             System.out.println("=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*==*=*=*=*=*=*=*=*==*=*=*");
         }
@@ -66,36 +81,25 @@ public class W2v {
     }
 
     public void testW2VModel() throws IOException, Searcher.UnknownWordException {
-        Main.binModel = Word2VecModel.fromBinFile(new File("./models/w2v_02.bin"));
+//        binModel = Word2VecModel.fromBinFile(new File("./models/w2v_02.bin"));
+        model = WordVectorSerializer.readWord2VecModel(new File("./models/w2v_02.bin"));
         for (String s :
                 "погашение_s задолженность_s заработный_a плата_s декабрь_s ндс_s облагаться_v фываыфва ".split(" ")
                 ) {
-            try {
-                System.out.println(s + " " + Main.binModel.forSearch().getMatches(s, 10));
-            } catch (Searcher.UnknownWordException e) {
-            }
+            System.out.println(s + " " + model.wordsNearest(s, 10));
+
         }
-        System.out.println(Main.binModel.forSearch().getRawVector("рублевый_a").size());
+        System.out.println(model.getWordVector("рублевый_a").length);
     }
 
-    public  void w2vBuildModel() throws InterruptedException, IOException {
-        Word2VecTrainerBuilder mod1 = Word2VecModel.trainer();
-        mod1.setNumIterations(100);
-        mod1.setWindowSize(10);                 //TODO tune
-        mod1.useHierarchicalSoftmax();          //TODO tune
-        mod1.type(NeuralNetworkType.SKIP_GRAM); //TODO tune
-        mod1.setDownSamplingRate(1e-4);
-        mod1.setMinVocabFrequency(2);
-        mod1.setLayerSize(200);                  //TODO tune
-        mod1.useNumThreads(4);
-
-        ArrayList<List<String>> sentences = new ArrayList<List<String>>();
+    public void w2vBuildModel() throws InterruptedException, IOException {
+        ArrayList<String> sentences = new ArrayList<String>();
         ArrayList<Pipe> w2vPipeLine = new ArrayList<Pipe>();
         w2vPipeLine.add(new CharSequence2TokenSequence(Pattern.compile("\\p{L}[\\p{L}\\p{P}]+\\p{L}")));
         w2vPipeLine.add(new TokenSequenceLowercase());
 
         w2vPipeLine.add(new FunctionToPipe((o) -> {
-            sentences.add(((TokenSequence) o.getData()).stream().map(Token::getText).collect(Collectors.toList()));
+            sentences.add(((TokenSequence) o.getData()).stream().map(Token::getText).reduce((s, s2) -> s+" "+s2).get());
             return o;
         }));
 
@@ -107,9 +111,21 @@ public class W2v {
                 )
         );
 
-        Word2VecModel model = mod1.train(sentences);
+        Word2Vec vec = new Word2Vec.Builder()
+                .minWordFrequency(2)
+                .iterations(100)
+                .layerSize(200)
+                .useHierarchicSoftmax(true)
+                .elementsLearningAlgorithm(new SkipGram<VocabWord>())
+                .workers(4)
+                .seed(42)
+                .windowSize(10)
+                .iterate(new CollectionSentenceIterator(sentences))
+                .tokenizerFactory(new DefaultTokenizerFactory())
+                .build();
+        vec.fit();
         System.out.println("Model builded");
-        model.toBinFile(new FileOutputStream(new File("./models/w2v_02.bin")));
+        WordVectorSerializer.writeWord2VecModel(vec,new File("./models/w2v_02.bin"));
         System.out.println("Model saved");
     }
 }
