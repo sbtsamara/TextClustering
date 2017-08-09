@@ -3,10 +3,12 @@ package starter;
  * Created by azaz on 25.07.17.
  */
 
+import cc.mallet.topics.ParallelTopicModel;
+import com.beust.jcommander.JCommander;
 import models.LDA;
-import models.W2v;
+import util.CommandLDA;
 
-import java.io.*;
+import java.io.File;
 
 public class Main {
 
@@ -15,21 +17,53 @@ public class Main {
 
 
     public static void main(String[] args) throws Exception {
+//        run("lda -train --count 50 -i ./data/cleanedFeedbacksUTF-8.csv -o ./models/feedback --print -it 500");
+//        run("lda -train --count 40 -i ./data/cleanedFeedbacksUTF-8.csv -o ./models/feedback --print -it 500");
+//        run("lda -train --count 30 -i ./data/cleanedFeedbacksUTF-8.csv -o ./models/feedback --print -it 500");
+//        run("lda -train --count 20 -i ./data/cleanedFeedbacksUTF-8.csv -o ./models/feedback --print -it 500");
+//        run("lda -train --count 10 -i ./data/cleanedFeedbacksUTF-8.csv -o ./models/feedback --print -it 500");
+        run("lda --model ./models/feedback_50.bin --eval клиент добрый вечер просить разобраться какой образ база банка появиться двойник идентичный ф тот абсолютно идентичный паспортный дать который иметься задолжность ипотека следствие заблокировать зарплатный карта сотрудник банка карта разблокировать извиниться гарантия начать списывать счёт чей кредит чей это ошибка");
+    }
 
-        LDA lda = new LDA();
-        lda.LDAOnText();
-//        preprocessFile("");
+    public static void run(String arg) throws Exception {
+        JCommander jc = new JCommander();
+        CommandLDA commandLDA = new CommandLDA();
+        jc.addCommand("lda", commandLDA, "LDA");
 
-//        w2vBuildModel();
 
-//        LDAOnText();
-//        System.out.println("=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*");
-//        System.out.println("=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*");
-//        System.out.println("=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*");
+//        jc.usage();
 
-//        testW2VModel();
-//        W2v w2v = new W2v();
-//        w2v.W2VCluster();
+//        jc.parse("lda -train --count 50 -i ./data/cleanedFeedbacksUTF-8.csv -o ./models/feedback --print -it 500".split(" "));
+//        jc.parse("lda --model ./models/feedback_35_send.bin --eval qweqweqwe qwe qweqwe".split(" "));
+        jc.parse(arg.split(" "));
+        if (jc.getParsedCommand().equalsIgnoreCase("lda")) {
+            LDA lda = new LDA();
+            ParallelTopicModel model = null;
+            if (commandLDA.inputModel!=null) {
+                model = ParallelTopicModel.read(new File(commandLDA.inputModel));
+            }
+
+            if (commandLDA.train) {
+                if(model==null){
+                    model = new ParallelTopicModel(commandLDA.topicCount);
+                }
+                model = lda.trainModel(model, commandLDA.topicCount, commandLDA.iterations, commandLDA.fileToPocess, commandLDA.outputModel);
+            }
+
+            if(model==null){
+                jc.usage();
+                System.exit(1);
+            }
+
+            if (commandLDA.print) {
+                lda.printModel(model);
+            }
+
+            if(commandLDA.texts.size()!=0){
+                lda.evaluateMode(model,commandLDA.texts.stream().reduce((s, s2) -> s+" "+s2).get());
+            }
+//            if(commandLDA.)
+        }
     }
 
 }

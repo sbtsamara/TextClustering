@@ -8,11 +8,6 @@ import cc.mallet.pipe.iterator.CsvIterator;
 import cc.mallet.types.InstanceList;
 import cc.mallet.types.Token;
 import cc.mallet.types.TokenSequence;
-import com.google.common.collect.ImmutableList;
-import com.medallia.word2vec.Searcher;
-import com.medallia.word2vec.Word2VecModel;
-import com.medallia.word2vec.Word2VecTrainerBuilder;
-import com.medallia.word2vec.neuralnetwork.NeuralNetworkType;
 import net.sf.javaml.clustering.Clusterer;
 import net.sf.javaml.clustering.MultiKMeans;
 import net.sf.javaml.clustering.evaluation.HybridCentroidSimilarity;
@@ -21,28 +16,21 @@ import net.sf.javaml.core.DefaultDataset;
 import net.sf.javaml.core.DenseInstance;
 import net.sf.javaml.distance.CosineDistance;
 import net.sf.javaml.tools.Serial;
-import org.deeplearning4j.models.embeddings.learning.ElementsLearningAlgorithm;
 import org.deeplearning4j.models.embeddings.learning.impl.elements.SkipGram;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
-import org.deeplearning4j.models.sequencevectors.iterators.AbstractSequenceIterator;
 import org.deeplearning4j.models.word2vec.VocabWord;
 import org.deeplearning4j.models.word2vec.Word2Vec;
-import org.deeplearning4j.text.documentiterator.interoperability.DocumentIteratorConverter;
 import org.deeplearning4j.text.sentenceiterator.CollectionSentenceIterator;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.DefaultTokenizerFactory;
 import org.nd4j.linalg.cpu.nativecpu.NDArray;
-import org.nd4j.linalg.factory.Nd4j;
 import pipes.FunctionToPipe;
 import util.Utils;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * Created by azaz on 07.08.17.
@@ -51,7 +39,7 @@ public class W2v {
 //    public static Word2VecModel binModel;
     public static Word2Vec model;
 
-    public void W2VCluster() throws IOException, Searcher.UnknownWordException {
+    public void W2VCluster() throws IOException{
         System.out.println("reading model");
 
         model = WordVectorSerializer.readWord2VecModel(new File("./models/w2v_02.bin"));
@@ -80,7 +68,7 @@ public class W2v {
 
     }
 
-    public void testW2VModel() throws IOException, Searcher.UnknownWordException {
+    public void testW2VModel() throws IOException {
 //        binModel = Word2VecModel.fromBinFile(new File("./models/w2v_02.bin"));
         model = WordVectorSerializer.readWord2VecModel(new File("./models/w2v_02.bin"));
         for (String s :

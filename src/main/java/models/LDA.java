@@ -2,15 +2,14 @@ package models;
 
 import cc.mallet.pipe.*;
 import cc.mallet.pipe.iterator.CsvIterator;
+import cc.mallet.pipe.iterator.StringArrayIterator;
 import cc.mallet.topics.ParallelTopicModel;
 import cc.mallet.topics.TopicInferencer;
 import cc.mallet.types.Instance;
 import cc.mallet.types.InstanceList;
-import com.medallia.word2vec.Searcher;
 import pipes.Sentence2ArrayList;
 import pipes.TokenSequence2File;
 import pipes.TokenSequence2Stem;
-import starter.Main;
 
 import java.io.*;
 import java.util.*;
@@ -25,7 +24,7 @@ public class LDA {
         init();
     }
 
-    public  void LDAOnText() throws Exception {
+    public void LDAOnText() throws Exception {
 
 //        preprocessFile("filtered_logs_1.tsv", "stammed.txt");
 //        ParallelTopicModel model = trainModel(50, "stammed.txt");
@@ -33,14 +32,16 @@ public class LDA {
         printModel("models/model_Logs_2000.bin.2000");
     }
 
-    private void printModel(String filename) throws Exception {
+    public void printModel(String filename) throws Exception {
         ParallelTopicModel model = ParallelTopicModel.read(new File(filename));
         System.out.println("Loaded");
-        int i=0;
-        for(Object[] words:model.getTopWords(10)){
-            System.out.println("тема № "+i+" ключевые слова: "+Arrays.toString(words));
+        printModel(model);
+    }
 
-
+    public void printModel(ParallelTopicModel model) throws Exception {
+        int i = 0;
+        for (Object[] words : model.getTopWords(10)) {
+            System.out.println("тема № " + i + " ключевые слова: " + Arrays.toString(words));
             i++;
         }
     }
@@ -65,11 +66,12 @@ public class LDA {
         trainPipeList = new ArrayList<Pipe>();
         trainPipeList.add(new CharSequence2TokenSequence(Pattern.compile("\\p{L}[\\p{L}\\p{P}]+\\p{L}")));
         trainPipeList.add(new TokenSequenceLowercase());
+//        trainPipeList.add(new PrintInput());
         trainPipeList.add(new TokenSequence2FeatureSequence());
 
     }
 
-    public  void preprocessFile(String input, String output) throws IOException {
+    public void preprocessFile(String input, String output) throws IOException {
 
         PrintWriter pw = new PrintWriter(new FileWriter(new File(output)), false);
         preprocessPipeList.add(new TokenSequence2File(pw));
@@ -92,14 +94,21 @@ public class LDA {
 
     }
 
-    public  void TestModel(String filename) throws Exception {
+    public void TestModel(String filename) throws Exception {
         ParallelTopicModel model = ParallelTopicModel.read(new File(filename));
         System.out.println("Loaded");
+        TestModel(model);
+    }
+
+    public void TestModel(ParallelTopicModel model) throws Exception {
+
         Object[][] topWords = model.getTopWords(10);
         ArrayList<String> arr = new ArrayList<String>();
 
-        testPipeList.add(1, new Sentence2ArrayList(arr));
-        InstanceList instances = new InstanceList(new SerialPipes(testPipeList));
+        ArrayList<Pipe> list = (ArrayList<Pipe>) testPipeList.clone();
+        list.add(1, new Sentence2ArrayList(arr));
+
+        InstanceList instances = new InstanceList(new SerialPipes(list));
 
 
         /*instances.addThruPipe(
@@ -119,6 +128,10 @@ public class LDA {
 
         TopicInferencer inferencer = model.getInferencer();
         ListIterator<String> it = arr.listIterator();
+        printWords(topWords, instances, inferencer, it);
+    }
+
+    private void printWords(Object[][] topWords, InstanceList instances, TopicInferencer inferencer, ListIterator<String> it) {
         for (Instance instance : instances) {
             String text = it.next();
             System.out.println(instance.getName() + " " + text);
@@ -143,8 +156,45 @@ public class LDA {
         }
     }
 
-    public  ParallelTopicModel trainModel(int topicCount, String filename) throws IOException {
+    public void evaluateMode(ParallelTopicModel model, String texts) {
+
+        ArrayList<String> arr = new ArrayList<String>();
+        ArrayList<Pipe> list = new ArrayList<>();
+        list.add(new CharSequenceLowercase());
+//        list.remove(list.size()-1);
+//        list.remove(list.size()-1);
+        list.add(new Sentence2ArrayList(arr));
+        list.add(new CharSequence2TokenSequence(Pattern.compile("\\p{L}[\\p{L}\\p{P}]+\\p{L}")));
+        list.add(new TokenSequence2FeatureSequence());
+
+        Object[][] topWords = model.getTopWords(10);
+        InstanceList instances = new InstanceList(new SerialPipes(list));
+
+        instances.addThruPipe(
+                new StringArrayIterator(
+                        new String[]{texts}
+                )
+        );
+        TopicInferencer inferencer = model.getInferencer();
+        ListIterator<String> it = arr.listIterator();
+        printWords(topWords, instances, inferencer, it);
+
+    }
+
+    public ParallelTopicModel trainModel(int topicCount, String filename) throws IOException {
+        return trainModel(topicCount, filename, null);
+    }
+
+    public ParallelTopicModel trainModel(int topicCount, String filename, String output) throws IOException {
+        return trainModel(topicCount, 500, filename, output);
+    }
+
+    public ParallelTopicModel trainModel(int topicCount, int iterations, String filename, String output) throws IOException {
         ParallelTopicModel model = new ParallelTopicModel(topicCount);
+        return trainModel(model, topicCount, iterations, filename, output);
+    }
+
+    public ParallelTopicModel trainModel(ParallelTopicModel model, int topicCount, int iterations, String filename, String output) throws IOException {
 
         InstanceList pipeline = new InstanceList(new SerialPipes(trainPipeList));
 
@@ -159,23 +209,15 @@ public class LDA {
         model.addInstances(pipeline);
 
         model.setNumThreads(4);
-        model.setNumIterations(2000);
-        model.setSaveSerializedModel(500, "./models/model_Logs_2000.bin");
+        model.setNumIterations(iterations);
+//        if(output!=null){
+//            model.setSaveSerializedModel(100, output+"_"+topicCount+".bin");
+//        }
         model.estimate();
+        model.write(new File(output + "_" + topicCount + ".bin"));
+
 
         return model;
     }
 
-    /*public List<Double> getVector(String s) {
-        try {
-            System.out.println(Main.binModel.forSearch().getMatches(s, 10));
-            return Main.binModel.forSearch().getRawVector(s);
-
-        } catch (Searcher.UnknownWordException e) {
-            e.printStackTrace();
-        }
-        return null;
-
-
-    }*/
 }
