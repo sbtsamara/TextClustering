@@ -1,11 +1,10 @@
-package starter;
+package ru.azaz.textProcessing.starter;
 
 import cc.mallet.pipe.*;
 import cc.mallet.pipe.iterator.CsvIterator;
 import cc.mallet.types.InstanceList;
 import cc.mallet.types.Token;
 import cc.mallet.types.TokenSequence;
-import org.deeplearning4j.datasets.DataSets;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
 import org.deeplearning4j.models.paragraphvectors.ParagraphVectors;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
@@ -24,12 +23,9 @@ import org.deeplearning4j.util.ModelSerializer;
 import org.jetbrains.annotations.NotNull;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.cpu.nativecpu.NDArray;
-import org.nd4j.linalg.dataset.DataSet;
-import org.nd4j.linalg.dataset.api.iterator.BaseDatasetIterator;
-import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
-import pipes.FunctionToPipe;
-import pipes.TokenSequence2Stem;
+import ru.azaz.textProcessing.pipes.FunctionToPipe;
+import ru.azaz.textProcessing.pipes.TokenSequence2Stem;
 
 import java.io.*;
 import java.util.ArrayList;

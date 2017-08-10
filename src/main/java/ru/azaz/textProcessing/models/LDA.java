@@ -1,4 +1,4 @@
-package models;
+package ru.azaz.textProcessing.models;
 
 import cc.mallet.pipe.*;
 import cc.mallet.pipe.iterator.CsvIterator;
@@ -7,9 +7,9 @@ import cc.mallet.topics.ParallelTopicModel;
 import cc.mallet.topics.TopicInferencer;
 import cc.mallet.types.Instance;
 import cc.mallet.types.InstanceList;
-import pipes.Sentence2ArrayList;
-import pipes.TokenSequence2File;
-import pipes.TokenSequence2Stem;
+import ru.azaz.textProcessing.pipes.Sentence2ArrayList;
+import ru.azaz.textProcessing.pipes.TokenSequence2File;
+import ru.azaz.textProcessing.pipes.TokenSequence2Stem;
 
 import java.io.*;
 import java.util.*;

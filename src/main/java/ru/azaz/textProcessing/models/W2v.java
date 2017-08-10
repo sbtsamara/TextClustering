@@ -1,4 +1,4 @@
-package models;
+package ru.azaz.textProcessing.models;
 
 import cc.mallet.pipe.CharSequence2TokenSequence;
 import cc.mallet.pipe.Pipe;
@@ -23,8 +23,8 @@ import org.deeplearning4j.models.word2vec.Word2Vec;
 import org.deeplearning4j.text.sentenceiterator.CollectionSentenceIterator;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.DefaultTokenizerFactory;
 import org.nd4j.linalg.cpu.nativecpu.NDArray;
-import pipes.FunctionToPipe;
-import util.Utils;
+import ru.azaz.textProcessing.pipes.FunctionToPipe;
+import ru.azaz.textProcessing.util.Utils;
 
 import java.io.File;
 import java.io.FileReader;
