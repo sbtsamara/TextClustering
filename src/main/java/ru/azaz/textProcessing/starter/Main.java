@@ -1,12 +1,12 @@
-package starter;
+package ru.azaz.textProcessing.starter;
 /**
  * Created by azaz on 25.07.17.
  */
 
 import cc.mallet.topics.ParallelTopicModel;
 import com.beust.jcommander.JCommander;
-import models.LDA;
-import util.CommandLDA;
+import ru.azaz.textProcessing.models.LDA;
+import ru.azaz.textProcessing.util.CommandLDA;
 
 import java.io.File;
 
@@ -40,7 +40,12 @@ public class Main {
 
 //        jc.parse("lda -train --count 50 -i ./data/cleanedFeedbacksUTF-8.csv -o ./models/feedback --print -it 500".split(" "));
 //        jc.parse("lda --model ./models/feedback_35_send.bin --eval qweqweqwe qwe qweqwe".split(" "));
-        jc.parse(arg);
+        try {
+            jc.parse(arg);
+        }catch (Exception e){
+            jc.usage();
+            System.exit(1);
+        }
         if (jc.getParsedCommand().equalsIgnoreCase("lda")) {
             LDA lda = new LDA();
             ParallelTopicModel model = null;

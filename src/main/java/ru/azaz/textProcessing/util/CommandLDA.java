@@ -1,8 +1,7 @@
-package util;
+package ru.azaz.textProcessing.util;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
-import com.beust.jcommander.converters.IParameterSplitter;
 
 import java.util.ArrayList;
 import java.util.List;
