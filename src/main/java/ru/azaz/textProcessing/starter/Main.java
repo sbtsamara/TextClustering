@@ -34,12 +34,6 @@ public class Main {
         JCommander jc = new JCommander();
         CommandLDA commandLDA = new CommandLDA();
         jc.addCommand("lda", commandLDA, "LDA");
-
-
-//        jc.usage();
-
-//        jc.parse("lda -train --count 50 -i ./data/cleanedFeedbacksUTF-8.csv -o ./models/feedback --print -it 500".split(" "));
-//        jc.parse("lda --model ./models/feedback_35_send.bin --eval qweqweqwe qwe qweqwe".split(" "));
         try {
             jc.parse(arg);
         }catch (Exception e){
