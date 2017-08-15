@@ -18,7 +18,7 @@ public class CommandLDA {
     public int topicCount;
 
     @Parameter(names = {"-it","--iterations"},description = "count of LDA passes")
-    public int iterations;
+    public int iterations=1000;
 
     @Parameter(names = {"--print"},description = "print word assignment")
     public boolean print=false;
@@ -34,4 +34,7 @@ public class CommandLDA {
 
     @Parameter(names = "--eval", variableArity = true)
     public List<String> texts = new ArrayList<>();
+
+    @Parameter(names = "--test")
+    public String onFile = "";
 }

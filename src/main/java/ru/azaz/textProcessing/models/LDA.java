@@ -5,9 +5,11 @@ import cc.mallet.pipe.iterator.CsvIterator;
 import cc.mallet.pipe.iterator.StringArrayIterator;
 import cc.mallet.topics.ParallelTopicModel;
 import cc.mallet.topics.TopicInferencer;
+import cc.mallet.types.Alphabet;
 import cc.mallet.types.Instance;
 import cc.mallet.types.InstanceList;
-import ru.azaz.textProcessing.pipes.Sentence2ArrayList;
+import javafx.util.Pair;
+import ru.azaz.textProcessing.pipes.Sentence2Collection;
 import ru.azaz.textProcessing.pipes.TokenSequence2File;
 import ru.azaz.textProcessing.pipes.TokenSequence2Stem;
 
@@ -15,10 +17,12 @@ import java.io.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
+import static ru.azaz.textProcessing.util.Utils.pairComparator;
+
 public class LDA {
     private ArrayList<Pipe> preprocessPipeList;
-    private ArrayList<Pipe> testPipeList;
-    private ArrayList<Pipe> trainPipeList;
+  //  private ArrayList<Pipe> testPipeList;
+//    private ArrayList<Pipe> trainPipeList;
 
     public LDA() {
         init();
@@ -41,7 +45,7 @@ public class LDA {
     public void printModel(ParallelTopicModel model) throws Exception {
         int i = 0;
         for (Object[] words : model.getTopWords(10)) {
-            System.out.println("тема № " + i + " ключевые слова: " + Arrays.toString(words));
+            System.out.println("тема №" + i + "ключевые слова:" + Arrays.toString(words));
             i++;
         }
     }
@@ -55,19 +59,14 @@ public class LDA {
         preprocessPipeList.add(new TokenSequenceRemoveStopwords(new File("stopStem.txt"), "UTF-8", false, false, false));
 
 
-        testPipeList = new ArrayList<Pipe>();
+        /*testPipeList = new ArrayList<Pipe>();
         testPipeList.add(new CharSequenceLowercase());
         testPipeList.add(new CharSequence2TokenSequence(Pattern.compile("\\p{L}[\\p{L}\\p{P}]+\\p{L}")));
         testPipeList.add(new TokenSequence2Stem());
         testPipeList.add(new TokenSequenceLowercase());
         testPipeList.add(new TokenSequenceRemoveStopwords(new File("stopStem.txt"), "UTF-8", false, false, false));
         testPipeList.add(new TokenSequence2FeatureSequence());
-
-        trainPipeList = new ArrayList<Pipe>();
-        trainPipeList.add(new CharSequence2TokenSequence(Pattern.compile("\\p{L}[\\p{L}\\p{P}]+\\p{L}")));
-        trainPipeList.add(new TokenSequenceLowercase());
-//        trainPipeList.add(new PrintInput());
-        trainPipeList.add(new TokenSequence2FeatureSequence());
+*/
 
     }
 
@@ -94,41 +93,73 @@ public class LDA {
 
     }
 
-    public void TestModel(String filename) throws Exception {
-        ParallelTopicModel model = ParallelTopicModel.read(new File(filename));
+    public void TestModel(String modelPath, String onFile) throws Exception {
+        ParallelTopicModel model = ParallelTopicModel.read(new File(modelPath));
         System.out.println("Loaded");
-        TestModel(model);
+        TestModel(model, onFile);
     }
 
-    public void TestModel(ParallelTopicModel model) throws Exception {
+    public void TestModel(ParallelTopicModel model, String onFile) throws Exception {
 
         Object[][] topWords = model.getTopWords(10);
-        ArrayList<String> arr = new ArrayList<String>();
 
-        ArrayList<Pipe> list = (ArrayList<Pipe>) testPipeList.clone();
-        list.add(1, new Sentence2ArrayList(arr));
+        ArrayList<String> arr = new ArrayList<String>();
+        ArrayList<Pipe> list = new ArrayList<>();
+
+        list.add(new CharSequenceLowercase());
+        list.add(new Sentence2Collection(arr));
+        list.add(new CharSequence2TokenSequence(Pattern.compile("\\p{L}[\\p{L}\\p{P}]+\\p{L}")));
+        list.add(new TokenSequence2FeatureSequence(model.getAlphabet()));
 
         InstanceList instances = new InstanceList(new SerialPipes(list));
 
-
-        /*instances.addThruPipe(
-                new StringArrayIterator(
-                        new String[]{
-                                "при сохранении документа это указывается как обязательное поле",
-                                "С данным заявление только в банк по месту обслуживания. Служба технической поддержки не принимает и не обрабатывает электронные документы,письма и платежные поручения."
-                        }
-
-                )
-        );*/
         instances.addThruPipe(
                 new CsvIterator(
-                        new FileReader(new File("stem.txt")), "(.*)", 1, -1, -1
+                        new FileReader(new File(onFile)), "(.*)\\*=\\*=\\*=(.*)", 2, 1, -1
                 )
         );
+        Iterator<Instance> instanceIterator = instances.iterator();
 
         TopicInferencer inferencer = model.getInferencer();
+        model.setRandomSeed(1337);
+        inferencer.setRandomSeed(1337);
+
+        int[] counter = new int[model.getNumTopics()];
+        ArrayList<Pair<Double, String>>[] examples = new ArrayList[model.getNumTopics()];
+        for (int i = 0; i < examples.length; i++) {
+            examples[i] = new ArrayList<>();
+        }
+
         ListIterator<String> it = arr.listIterator();
-        printWords(topWords, instances, inferencer, it);
+        while (instanceIterator.hasNext()) {
+            Instance inst = instanceIterator.next();
+            double[] results = inferencer.getSampledDistribution(inst, 0, 0, 0);
+            int maxInd = 0;
+            for (int j = 0; j < results.length; j++) {
+                if (results[maxInd] < results[j]) {
+                    maxInd = j;
+                }
+            }
+            counter[maxInd]++;
+            examples[maxInd].add(new Pair<>(results[maxInd], "\"" + inst.getTarget() + "\";\"" + it.next() + "\""));
+        }
+
+        for (int i = 0; i < examples.length; i++) {
+            examples[i].sort(pairComparator.reversed());
+        }
+
+        Object[][] topWord = model.getTopWords(10);
+        for (int i = 0; i < counter.length; i++) {
+            System.out.println("тема №" + i + "; ключевые слова:" + Arrays.toString(topWord[i]) + "; количество документов по теме: " + counter[i]);
+        }
+
+        System.out.println("theme;text;stammed;keywords");
+        for (int i = 0; i < counter.length; i++) {
+            for (Pair<Double, String> example : examples[i]) {
+                System.out.println(i + ";"+ example.getValue() + ";" + Arrays.toString(topWord[i]));
+            }
+        }
+
     }
 
     private void printWords(Object[][] topWords, InstanceList instances, TopicInferencer inferencer, ListIterator<String> it) {
@@ -163,9 +194,9 @@ public class LDA {
         list.add(new CharSequenceLowercase());
 //        list.remove(list.size()-1);
 //        list.remove(list.size()-1);
-        list.add(new Sentence2ArrayList(arr));
+        list.add(new Sentence2Collection(arr));
         list.add(new CharSequence2TokenSequence(Pattern.compile("\\p{L}[\\p{L}\\p{P}]+\\p{L}")));
-        list.add(new TokenSequence2FeatureSequence());
+        list.add(new TokenSequence2FeatureSequence(model.getAlphabet()));
 
         Object[][] topWords = model.getTopWords(10);
         InstanceList instances = new InstanceList(new SerialPipes(list));
@@ -195,29 +226,37 @@ public class LDA {
     }
 
     public ParallelTopicModel trainModel(ParallelTopicModel model, int topicCount, int iterations, String filename, String output) throws IOException {
+        return trainModel(model, topicCount, iterations, filename, output, "(.*)", 1);
+    }
 
+    public ParallelTopicModel trainModel(ParallelTopicModel model, int topicCount, int iterations, String filename, String output, String regexp, int dataGroup) throws IOException {
+
+        ArrayList<Pipe> trainPipeList = new ArrayList<Pipe>();
+        trainPipeList.add(new CharSequence2TokenSequence(Pattern.compile("\\p{L}[\\p{L}\\p{P}]+\\p{L}")));
+        trainPipeList.add(new TokenSequenceRemoveStopwords(new File("stopStem.txt"), "UTF-8", false, false, false));
+        trainPipeList.add(new TokenSequenceLowercase());
+        trainPipeList.add(new TokenSequence2FeatureSequence(model.getAlphabet()==null?new Alphabet():model.getAlphabet()));
         InstanceList pipeline = new InstanceList(new SerialPipes(trainPipeList));
 
-        Pattern p = Pattern.compile("(.*)");
+        Pattern p = Pattern.compile(regexp);
         pipeline.addThruPipe(
                 new CsvIterator(
                         new FileReader(new File(filename)),
-                        p, 1, -1, -1
+                        p, dataGroup, -1, -1
                 )
         );
 
         model.addInstances(pipeline);
-
-        model.setNumThreads(4);
         model.setNumIterations(iterations);
-//        if(output!=null){
-//            model.setSaveSerializedModel(100, output+"_"+topicCount+".bin");
-//        }
+        model.setRandomSeed(1337);
         model.estimate();
-        model.write(new File(output + "_" + topicCount + ".bin"));
 
-
+        File f = new File(output + "/");
+        f.mkdirs();
+        model.write(new File(output + "/model_Topic:" + topicCount + "_IT:" + iterations + ".bin"));
+//        pipeline.getAlphabet().
         return model;
     }
+
 
 }

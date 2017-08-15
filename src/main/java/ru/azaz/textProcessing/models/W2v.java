@@ -5,6 +5,7 @@ import cc.mallet.pipe.Pipe;
 import cc.mallet.pipe.SerialPipes;
 import cc.mallet.pipe.TokenSequenceLowercase;
 import cc.mallet.pipe.iterator.CsvIterator;
+import cc.mallet.types.Instance;
 import cc.mallet.types.InstanceList;
 import cc.mallet.types.Token;
 import cc.mallet.types.TokenSequence;
@@ -37,12 +38,10 @@ import java.util.regex.Pattern;
  */
 public class W2v {
 //    public static Word2VecModel binModel;
-    public static Word2Vec model;
-
     public void W2VCluster() throws IOException{
         System.out.println("reading model");
 
-        model = WordVectorSerializer.readWord2VecModel(new File("./models/w2v_02.bin"));
+        Word2Vec model = WordVectorSerializer.readWord2VecModel(new File("./models/w2v_02.bin"));
 //        Searcher search = binModel.forSearch();
         Dataset data = new DefaultDataset();
         System.out.println("get W2v");
@@ -53,7 +52,7 @@ public class W2v {
         }
 //        System.out.println(data.size());
         System.out.println("clustering");
-        Clusterer clf = new MultiKMeans(50, 100, 10, new CosineDistance(), new HybridCentroidSimilarity());//new KMeans(50,100,new CosineDistance());
+        Clusterer clf = new MultiKMeans(50, 100, 10, new CosineDistance(), new HybridCentroidSimilarity());
         Serial.store(clf, "./models/Clusterer_CLF.bin");
         Dataset[] clusters = clf.cluster(data);
 
@@ -68,25 +67,28 @@ public class W2v {
 
     }
 
-    public void testW2VModel() throws IOException {
-//        binModel = Word2VecModel.fromBinFile(new File("./models/w2v_02.bin"));
-        model = WordVectorSerializer.readWord2VecModel(new File("./models/w2v_02.bin"));
-        for (String s :
-                "погашение_s задолженность_s заработный_a плата_s декабрь_s ндс_s облагаться_v фываыфва ".split(" ")
-                ) {
+    public void testW2VModel(String s) throws IOException {
+        testW2VModel(s,"./models/w2v_02.bin");
+    }
+    public void testW2VModel(String s,String inputFile) throws IOException {
+        Word2Vec model = WordVectorSerializer.readWord2VecModel(new File(inputFile));
+        testW2VModel(s,model);
+    }
+    public void testW2VModel(String input,Word2Vec model) throws IOException {
+        for (String s :input.split(" ")) {
             System.out.println(s + " " + model.wordsNearest(s, 10));
-
+            System.out.println(model.getWordVector(s));
+            System.out.println("=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*");
         }
-        System.out.println(model.getWordVector("рублевый_a").length);
     }
 
-    public void w2vBuildModel() throws InterruptedException, IOException {
+    public Word2Vec w2vBuildModel(int minWordFreq, int iterations, int layerSize, int windowSize, String output, String inputFile) throws InterruptedException, IOException {
         ArrayList<String> sentences = new ArrayList<String>();
         ArrayList<Pipe> w2vPipeLine = new ArrayList<Pipe>();
         w2vPipeLine.add(new CharSequence2TokenSequence(Pattern.compile("\\p{L}[\\p{L}\\p{P}]+\\p{L}")));
         w2vPipeLine.add(new TokenSequenceLowercase());
 
-        w2vPipeLine.add(new FunctionToPipe((o) -> {
+        w2vPipeLine.add(new FunctionToPipe((Instance o) -> {
             sentences.add(((TokenSequence) o.getData()).stream().map(Token::getText).reduce((s, s2) -> s+" "+s2).get());
             return o;
         }));
@@ -94,27 +96,31 @@ public class W2v {
         InstanceList pipeline = new InstanceList(new SerialPipes(w2vPipeLine));
         pipeline.addThruPipe(
                 new CsvIterator(
-                        new FileReader(new File("stammed.txt")),
+                        new FileReader(new File(inputFile)),
                         "(.*)", 1, -1, -1
                 )
         );
 
         Word2Vec vec = new Word2Vec.Builder()
-                .minWordFrequency(2)
-                .iterations(100)
-                .layerSize(200)
+                .minWordFrequency(minWordFreq)
+                .iterations(iterations)
+                .layerSize(layerSize)
                 .useHierarchicSoftmax(true)
                 .elementsLearningAlgorithm(new SkipGram<VocabWord>())
                 .workers(4)
                 .seed(42)
-                .windowSize(10)
+                .windowSize(windowSize)
                 .iterate(new CollectionSentenceIterator(sentences))
                 .tokenizerFactory(new DefaultTokenizerFactory())
                 .build();
         vec.fit();
         System.out.println("Model builded");
-        WordVectorSerializer.writeWord2VecModel(vec,new File("./models/w2v_02.bin"));
-        System.out.println("Model saved");
+
+        if(output!=null){
+            WordVectorSerializer.writeWord2VecModel(vec,new File(output));
+            System.out.println("Model saved");
+        }
+        return vec;
     }
 }
 
